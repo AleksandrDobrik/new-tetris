@@ -1,9 +1,4 @@
 ﻿// See https://aka.ms/new-console-template for more information
-bool test;
-int[,] fieldGame = new int [21, 12];
-for (int i = 0; i < fieldGame.GetLength(0); i++)
-    for (int j = 0; j < fieldGame.GetLength(1); j++)
-        if (j == 0 || i == fieldGame.GetLength(0) - 1 || j == fieldGame.GetLength(1) - 1 )  fieldGame[i, j] = 1;
 void Print(int[,] field)
 {
     Console.Clear();
@@ -12,7 +7,7 @@ void Print(int[,] field)
         for (int j = 0; j < field.GetLength(1); j++)
         {
             if (field[i, j] == 0)  Console.Write("  |");
-            else Console.Write($"{field[i, j]} |");
+            else Console.Write("X |");
         }
         Console.WriteLine();
     }
@@ -36,17 +31,12 @@ int[,] NewFigure ()
     if (NewFigure == 5 ) return horseRight;
     return square;
 }
-void AddFigure(int[,] field, int[,] figure, int kordI, int kordJ)
+void ReplaceFigure(int[,] field, int[,] figure, int kordI, int kordJ, bool add)
 {
     for (int i = 0; i < figure.GetLength(0); i++)
         for (int j = 0; j < figure.GetLength(1); j++)
-            if (figure[i, j] != 0) field[kordI + i, kordJ + j] = figure[i, j];
-}
-void DeleteFigure(int[,] field, int[,] figure, int kordI, int kordJ)
-{
-    for (int i = 0; i < figure.GetLength(0); i++)
-        for (int j = 0; j < figure.GetLength(1); j++)
-            if (figure[i, j] != 0) field[kordI + i, kordJ + j] = 0;
+            if (figure[i, j] != 0) if(add) field[kordI + i, kordJ + j] = figure[i, j];
+                                    else field[kordI + i, kordJ + j] = 0;
 }
 bool CheckCollision(int[,] field, int[,] figure, int kordI, int kordJ)
 {
@@ -82,41 +72,65 @@ void DeleteLine(int[,] field, int kordLine)
     for( int j = 1; j < field.GetLength(1) - 1; j++)
         field[0, j] = 0;
 }
-void Game (int[,] field)
+int[,] fieldGame = new int [21, 12];
+for (int l = 0; l < fieldGame.GetLength(0); l++)
+    for (int k = 0; k < fieldGame.GetLength(1); k++)
+        if (k == 0 || l == fieldGame.GetLength(0) - 1 
+                || k == fieldGame.GetLength(1) - 1 )  
+                fieldGame[l, k] = 1;
+int i = 0, j = 5;
+bool test, end = false, testNewFigure = true;
+int[,] newFigure = new int[2,4];
+new Thread(() =>
 {
     while(true)
     {
-        int i = 0, j = 5;
-        int[,] newFigure =  NewFigure();
-        test = CheckCollision(field, newFigure, i, j);
-        if (test == false) { Console.WriteLine("Game over");return;}
-        AddFigure(field, newFigure, i, j);
-        Print(field);
-        while(true)
+        if (testNewFigure == true)
         {
-            DeleteFigure(field, newFigure, i, j);
-            var key = Console.ReadKey(true).Key;
-            if(key == ConsoleKey.LeftArrow && (test = CheckCollision(field, newFigure, i, j - 1)) == true) j-=1; 
-            if(key == ConsoleKey.RightArrow && (test = CheckCollision(field, newFigure, i, j + 1)) == true) j+=1;
-            if(key == ConsoleKey.Spacebar)
-            {
-                int[,] testFigure = Rotation(newFigure);
-                if ((test = CheckCollision(field, testFigure, i, j)) == true)
-                newFigure = testFigure;
-            }
-            if(key == ConsoleKey.DownArrow) 
-            if (test = CheckCollision(field, newFigure, i + 1, j) == true) i+=1;
-            else 
-            {
-                AddFigure(field, newFigure, i, j);
-                int line;
-                while((line = CheckLine (field)) != -1) 
-                    DeleteLine(field, line);
-                break;
-            }           
-            AddFigure(field, newFigure, i, j);            
-            Print(field);
+        i = 0;
+        j = 5;
+        newFigure =  NewFigure();
+        testNewFigure = false;
+        test = CheckCollision(fieldGame, newFigure, i, j);
+        if (test == false) {Console.WriteLine("Game Over"); break;}
         }
+        ReplaceFigure(fieldGame, newFigure, i , j, true);
+        Print(fieldGame);
+        ReplaceFigure(fieldGame, newFigure, i, j, false); 
+        i++;
+        test = CheckCollision(fieldGame, newFigure, i + 1, j);
+        if (test == false)
+        {
+                testNewFigure = true;
+                ReplaceFigure(fieldGame, newFigure, i , j, true);
+                int line;
+                while((line = CheckLine (fieldGame)) != -1) 
+                    DeleteLine(fieldGame, line);
+        }
+        Thread.Sleep(500);
+    }
+}).Start();
+while(true)
+{
+    if (end) break;
+    var key = Console.ReadKey(true).Key;
+    if(key == ConsoleKey.LeftArrow 
+        && (test = CheckCollision(fieldGame, newFigure, i, j - 1)) == true) j-=1; 
+    if(key == ConsoleKey.RightArrow 
+        && (test = CheckCollision(fieldGame, newFigure, i, j + 1)) == true) j+=1;
+    if(key == ConsoleKey.Spacebar)
+    {
+        int[,] testFigure = Rotation(newFigure);
+        if ((test = CheckCollision(fieldGame, testFigure, i, j)) == true)
+        newFigure = testFigure;
+    }
+    if(key == ConsoleKey.DownArrow) 
+    {
+        while (CheckCollision(fieldGame, newFigure, i, j)) i++;
+        ReplaceFigure(fieldGame, newFigure, i - 1, j, true);
+        int line;
+        while((line = CheckLine (fieldGame)) != -1) 
+            DeleteLine(fieldGame, line);
+        testNewFigure = true;
     }
 }
-Game(fieldGame);
